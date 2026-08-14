@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+__pycache__/
+*.py[cod]
 
 # next.js
 /.next/
@@ -32,7 +34,6 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
-.dev.vars
 
 # vercel
 .vercel
@@ -41,7 +42,6 @@ yarn-error.log*
 next-env.d.ts
 *.tsbuildinfo
 /dist/
-/.wrangler/
 /data/
 /.szeruj-data/
 /outputs/

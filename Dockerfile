@@ -4,8 +4,7 @@ FROM node:26-bookworm-slim AS builder
 
 ENV NPM_CONFIG_AUDIT=false \
     NPM_CONFIG_FUND=false \
-    NPM_CONFIG_UPDATE_NOTIFIER=false \
-    SZERUJ_STORAGE_DRIVER=node
+    NPM_CONFIG_UPDATE_NOTIFIER=false
 
 WORKDIR /app
 
@@ -21,8 +20,7 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     MALLOC_ARENA_MAX=2 \
     PORT=3000 \
-    SZERUJ_DATA_DIR=/data \
-    SZERUJ_STORAGE_DRIVER=node
+    SZERUJ_DATA_DIR=/data
 
 WORKDIR /app
 

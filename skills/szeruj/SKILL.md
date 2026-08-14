@@ -80,8 +80,9 @@ dokument został opublikowany, jeśli API nie zwróciło poprawnego adresu.
 
 - `400`: popraw dokument, UTF-8, tytuł albo strukturę ZIP-a i wyślij poprawiony
   artefakt najwyżej raz.
-- `401`: nie wypisuj tokenu ani nie próbuj logowania do panelu. Zgłoś problem z
-  konfiguracją tokenu.
+- `401`: nie wypisuj tokenu ani nie próbuj logowania do panelu. Poproś
+  użytkownika, aby na swojej maszynie ponownie uruchomił konfigurator z
+  `--configure --force`; token ma wkleić wyłącznie w ukrytym promptcie.
 - `413`: zmniejsz dokument lub liczbę zasobów; nie obchodź limitów losowym
   dzieleniem publikacji.
 - Brak połączenia: uruchom klienta z `--check`. Nie przełączaj samodzielnie celu
@@ -91,18 +92,30 @@ dokument został opublikowany, jeśli API nie zwróciło poprawnego adresu.
 - Publikacja udana, kontrolne otwarcie nieudane: podaj otrzymany URL i krótko
   zaznacz brak potwierdzenia podglądu.
 
-## Korzystaj z konfiguracji bez ujawniania sekretów
+## Korzystaj z globalnej konfiguracji bez ujawniania sekretów
 
-Zalecana konfiguracja użytkownika to `~/.config/szeruj/config.env`:
+Konfiguracja jest globalna dla konta systemowego, więc działa w każdym projekcie
+i w każdej nowej sesji agenta. Człowiek tworzy ją jednorazowo poleceniem:
 
-```dotenv
-SZERUJ_BASE_URL=http://szeruj.local:8369
-SZERUJ_API_TOKEN=wklej_tutaj_token_serwera
+```bash
+python3 <katalog-skilla>/scripts/share.py \
+  --configure --base-url http://adres-serwera:8369
 ```
 
-Możesz też użyć zmiennych procesu albo `--env-file`. Klient rozpoznaje
-`SZERUJ_BASE_URL`, `SZERUJ_PUBLIC_URL`, `SZERUJ_API_TOKEN` i serwerowe
-`API_TOKEN`. Domyślny adres to `http://szeruj.local:8369`.
+Konfigurator pobiera token w ukrytym promptcie i zapisuje go poza projektami:
+
+- Linux: `~/.config/szeruj/config.env`,
+- macOS: `~/Library/Application Support/szeruj/config.env`,
+- Windows: `%APPDATA%\szeruj\config.env`.
+
+`XDG_CONFIG_HOME` i `SZERUJ_CONFIG_FILE` mogą zmienić lokalizację. Nigdy nie
+proś użytkownika o wklejenie tokenu do czatu, treści dokumentu ani argumentu
+polecenia. Gdy konfiguracji brakuje, podaj powyższe polecenie i poczekaj, aż
+użytkownik sam wklei token w ukrytym promptcie.
+
+Klient rozpoznaje też zmienne procesu `SZERUJ_BASE_URL`, `SZERUJ_PUBLIC_URL`,
+`SZERUJ_API_TOKEN` i `API_TOKEN`. Jawny plik można wskazać przez
+`--config-file`. Domyślny adres to `http://szeruj.local:8369`.
 
 Sprawdź serwer bez publikowania:
 

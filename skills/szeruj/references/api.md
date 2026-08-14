@@ -9,8 +9,8 @@
 - Lekki test dostępności: `GET /api/health`.
 
 Token daje prawo tworzenia dokumentów. Nie umieszczaj go w publikowanej treści,
-logach ani argumentach procesu. Używaj klienta `share.py`, który czyta sekret ze
-środowiska albo z prywatnego pliku konfiguracyjnego.
+logach, czacie ani argumentach procesu. Używaj klienta `share.py`, który czyta
+sekret ze środowiska albo z prywatnego globalnego pliku konfiguracyjnego.
 
 ## JSON
 
@@ -87,5 +87,22 @@ Token:
 3. `API_TOKEN` w środowisku,
 4. `API_TOKEN` w konfiguracji.
 
-Bez `--env-file` klient sprawdza `~/.config/szeruj/config.env`, a podczas pracy
-w repozytorium samego Szeruj także jego `.env` i `.env.local`.
+Bez `--config-file` klient sprawdza globalny plik użytkownika:
+
+- Linux: `~/.config/szeruj/config.env`,
+- macOS: `~/Library/Application Support/szeruj/config.env`,
+- Windows: `%APPDATA%\szeruj\config.env`.
+
+`XDG_CONFIG_HOME` i `SZERUJ_CONFIG_FILE` mogą zmienić lokalizację. Podczas pracy
+w repozytorium samego Szeruj klient potrafi też odczytać jego `.env`, ale nie
+należy kopiować serwerowego `.env` do innych projektów.
+
+Zalecana jednorazowa konfiguracja:
+
+```bash
+python3 <katalog-skilla>/scripts/share.py \
+  --configure --base-url http://adres-serwera:8369
+```
+
+Token jest wprowadzany w ukrytym promptcie. Istniejący plik można świadomie
+zastąpić przez `--force`.

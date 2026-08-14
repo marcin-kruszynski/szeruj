@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import mimetypes
 import os
@@ -75,13 +76,32 @@ def project_config_paths() -> list[Path]:
     current = Path.cwd().resolve()
     for directory in (current, *current.parents):
         if is_szeruj_project(directory):
-            return [directory / ".env", directory / ".env.local"]
+            return [directory / ".env"]
     return []
 
 
+def global_config_path() -> Path:
+    explicit = os.environ.get("SZERUJ_CONFIG_FILE", "").strip()
+    if explicit:
+        return Path(explicit).expanduser()
+
+    xdg_home = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    if xdg_home:
+        return Path(xdg_home).expanduser() / "szeruj" / "config.env"
+
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA", "").strip()
+        root = Path(appdata).expanduser() if appdata else Path.home() / "AppData" / "Roaming"
+        return root / "szeruj" / "config.env"
+
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "szeruj" / "config.env"
+
+    return Path.home() / ".config" / "szeruj" / "config.env"
+
+
 def default_config_paths() -> list[Path]:
-    config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
-    return [config_home / "szeruj" / "config.env", *project_config_paths()]
+    return [global_config_path(), *project_config_paths()]
 
 
 def load_configuration(explicit_path: Path | None) -> dict[str, str]:
@@ -134,9 +154,78 @@ def resolve_token(config: dict[str, str]) -> str:
     ).strip()
     if not token:
         raise ShareError(
-            "Brakuje tokenu API. Ustaw SZERUJ_API_TOKEN albo skonfiguruj API_TOKEN w pliku env."
+            "Brakuje tokenu API. Uruchom ten klient z opcjami "
+            f"--configure --base-url {DEFAULT_BASE_URL} i wklej token w ukrytym promptcie."
         )
     return token
+
+
+def configure_client(
+    target: Path,
+    base_url: str,
+    force: bool,
+    timeout: float,
+    output_json: bool,
+) -> int:
+    target = target.expanduser()
+    if target.is_symlink():
+        raise ShareError(f"Plik konfiguracji nie może być dowiązaniem symbolicznym: {target}")
+    target = target.resolve()
+    if target.exists() and not force:
+        raise ShareError(
+            f"Konfiguracja już istnieje: {target}. Użyj --force, aby ją zastąpić."
+        )
+
+    token = getpass.getpass("Wklej API_TOKEN z pliku .env serwera (wartość będzie ukryta): ").strip()
+    if len(token) < 32:
+        raise ShareError("Token musi mieć co najmniej 32 znaki.")
+    if any(character.isspace() for character in token):
+        raise ShareError("Token nie może zawierać białych znaków.")
+
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        try:
+            target.parent.chmod(0o700)
+        except OSError:
+            pass
+        flags = os.O_WRONLY | os.O_CREAT | (os.O_TRUNC if force else os.O_EXCL)
+        flags |= getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(target, flags, 0o600)
+        try:
+            os.chmod(target, 0o600)
+        except OSError:
+            pass
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as config_file:
+            config_file.write(
+                "# Global Szeruj client configuration. Keep this file private.\n"
+                f"SZERUJ_BASE_URL={base_url}\n"
+                f"SZERUJ_API_TOKEN={token}\n"
+            )
+    except OSError as error:
+        raise ShareError(f"Nie można zapisać konfiguracji {target}: {error}") from error
+
+    reachable, status, error = verify_url(f"{base_url}/api/health", timeout)
+    result = {
+        "ok": True,
+        "config_file": str(target),
+        "base_url": base_url,
+        "server_reachable": reachable,
+        "status": status,
+        "error": error,
+    }
+    if output_json:
+        print(json.dumps(result, ensure_ascii=False))
+    else:
+        print(f"Gotowe. Globalna konfiguracja Szeruj jest w: {target}")
+        if reachable:
+            print(f"Serwer odpowiada: {base_url}")
+        else:
+            print(
+                "Konfiguracja została zapisana, ale serwer teraz nie odpowiada: "
+                f"{error or f'HTTP {status}'}. Sprawdź później przez --check.",
+                file=sys.stderr,
+            )
+    return 0
 
 
 def request_json(request: urllib.request.Request, timeout: float) -> tuple[int, dict[str, Any]]:
@@ -233,7 +322,7 @@ def json_payload(document_type: str | None, title: str | None) -> tuple[bytes, s
 def verify_url(url: str, timeout: float) -> tuple[bool, int | None, str | None]:
     request = urllib.request.Request(
         url,
-        headers={"Accept": "text/html,*/*;q=0.8", "User-Agent": "szeruj-skill/1.1"},
+        headers={"Accept": "text/html,*/*;q=0.8", "User-Agent": "szeruj-skill/1.2"},
         method="GET",
     )
     try:
@@ -271,7 +360,7 @@ def publish(args: argparse.Namespace, config: dict[str, str], base_url: str) -> 
             "Accept": "application/json",
             "Authorization": f"Bearer {token}",
             "Content-Type": content_type,
-            "User-Agent": "szeruj-skill/1.1",
+            "User-Agent": "szeruj-skill/1.2",
         },
         method="POST",
     )
@@ -321,17 +410,27 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Publikuj Markdown, HTML lub ZIP w aplikacji Szeruj."
     )
-    source = parser.add_mutually_exclusive_group()
+    source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--file", type=Path, help="Plik .md, .html albo .zip do publikacji.")
     source.add_argument("--stdin", action="store_true", help="Odczytaj Markdown lub HTML ze stdin.")
+    source.add_argument("--check", action="store_true", help="Sprawdź serwer bez publikowania.")
+    source.add_argument(
+        "--configure",
+        action="store_true",
+        help="Zapisz globalnie URL i token (token jest odczytywany w ukrytym promptcie).",
+    )
     parser.add_argument("--type", dest="document_type", choices=("markdown", "html"))
     parser.add_argument("--title", help="Tytuł widoczny w Szeruj.")
     parser.add_argument("--base-url", help=f"Bazowy URL (domyślnie {DEFAULT_BASE_URL}).")
-    parser.add_argument("--env-file", type=Path, help="Plik env z tokenem i opcjonalnym URL-em.")
+    parser.add_argument(
+        "--config-file",
+        type=Path,
+        help="Jawny plik konfiguracji; z --configure wybiera miejsce zapisu.",
+    )
+    parser.add_argument("--force", action="store_true", help="Zastąp istniejącą konfigurację.")
     parser.add_argument("--timeout", type=float, default=60.0, help="Timeout żądania w sekundach.")
     parser.add_argument("--no-verify", action="store_true", help="Nie otwieraj kontrolnie publicznego URL-u.")
     parser.add_argument("--json", dest="output_json", action="store_true", help="Wypisz wynik jako JSON.")
-    parser.add_argument("--check", action="store_true", help="Sprawdź serwer bez publikowania.")
     return parser
 
 
@@ -340,16 +439,26 @@ def main() -> int:
     args = parser.parse_args()
     if args.timeout <= 0:
         parser.error("--timeout musi być większy od zera")
-    if args.check and (args.file or args.stdin):
-        parser.error("--check nie może być łączone z --file ani --stdin")
-    if not args.check and not (args.file or args.stdin):
-        parser.error("podaj --file albo --stdin")
     if args.file and args.document_type:
         parser.error("--type jest używane tylko z --stdin")
+    if args.force and not args.configure:
+        parser.error("--force jest używane tylko z --configure")
+    if (args.check or args.configure) and (args.document_type or args.title):
+        parser.error("--type i --title są używane tylko przy publikacji")
+    if (args.check or args.configure) and args.no_verify:
+        parser.error("--no-verify jest używane tylko przy publikacji")
 
     try:
-        config = load_configuration(args.env_file)
+        config = load_configuration(args.config_file) if not args.configure else {}
         base_url = resolve_base_url(args.base_url, config)
+        if args.configure:
+            return configure_client(
+                args.config_file or global_config_path(),
+                base_url,
+                args.force,
+                min(args.timeout, 15.0),
+                args.output_json,
+            )
         if args.check:
             return check_server(base_url, args.timeout, args.output_json)
         return publish(args, config, base_url)
