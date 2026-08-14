@@ -2,7 +2,6 @@
 .gitignore
 .env
 .env.*
-.wrangler
 .szeruj-data
 data
 .vinext

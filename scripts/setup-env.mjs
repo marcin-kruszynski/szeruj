@@ -53,4 +53,5 @@ chmodSync(target, 0o600);
 mkdirSync(path.resolve(process.cwd(), "data"), { recursive: true });
 
 console.log("Gotowe: utworzyłem prywatny .env z losowymi sekretami i katalog data.");
+console.log("Token dla agentów jest w .env jako API_TOKEN (pokażesz go przez: npm run token --silent).");
 console.log("Sprawdź SZERUJ_PUBLIC_URL, a potem uruchom: docker compose up -d --build");
