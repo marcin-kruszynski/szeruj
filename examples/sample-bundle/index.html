@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Szeruj — przykładowy raport</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <p class="label">RAPORT AGENTA / Q3</p>
+      <h1>Wzrost, który widać.</h1>
+      <p class="lead">Przykładowy pakiet HTML z osobnym CSS-em i JavaScriptem.</p>
+      <section class="chart" aria-label="Wykres wzrostu od maja do sierpnia">
+        <div style="--value: 32%"><span>Maj</span></div>
+        <div style="--value: 51%"><span>Cze</span></div>
+        <div style="--value: 68%"><span>Lip</span></div>
+        <div style="--value: 86%"><span>Sie</span></div>
+      </section>
+      <button id="insight">Pokaż wniosek</button>
+      <p id="result" aria-live="polite"></p>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

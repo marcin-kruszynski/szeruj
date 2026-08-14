@@ -1,0 +1,4 @@
+interface:
+  display_name: "Szeruj"
+  short_description: "Tworzy i publikuje dokumenty przez Szeruj"
+  default_prompt: "Użyj $szeruj, aby przygotować dokument i zwrócić gotowy link."
