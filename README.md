@@ -13,7 +13,7 @@ frontendu dla każdego dokumentu i bez ceremonii.
 
 ## Co dostajesz
 
-- pięć dopracowanych motywów: Papier, Noc, Ocean, Las i Śliwka,
+- dziesięć dopracowanych i zapamiętywanych motywów: pięć jasnych i pięć ciemnych,
 - GitHub Flavored Markdown z tabelami, checklistami, listami i kolorowaniem kodu,
 - przycisk kopiowania przy każdym bloku kodu,
 - samodzielny HTML oraz paczki ZIP z CSS-em, JavaScriptem, grafikami i fontami,
@@ -22,6 +22,10 @@ frontendu dla każdego dokumentu i bez ceremonii.
 - proste API Bearer dla agentów,
 - gotowy globalny skill Codex wywoływany słowami „Hej, szeruj”,
 - lekki kontener: jeden serwer Node, SQLite i zwykły katalog z plikami.
+
+Jasne motywy to Papier, Poranek, Laguna, Łąka i Lawenda. Ciemne: Noc, Głębia,
+Bór, Wino i Grafit. Wybór jest zapamiętywany lokalnie w przeglądarce i działa
+na stronie głównej, dokumentach oraz w panelu admina.
 
 UI, API i magazyn dokumentów są jedną aplikacją. Do działania nie potrzebujesz
 żadnej zewnętrznej bazy ani dodatkowej usługi.

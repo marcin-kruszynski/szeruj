@@ -60,7 +60,7 @@ export default function Home() {
             </div>
             <div className="mock-code"><span>POST</span> /api/v1/documents <i>201</i></div>
           </article>
-          <div className="floating-theme"><Palette size={16} /> ocean</div>
+          <div className="floating-theme"><Palette size={16} /> 10 motywów</div>
         </div>
       </section>
 

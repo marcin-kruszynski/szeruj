@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { zipSync, strToU8 } from "fflate";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -7,6 +8,56 @@ import { extractHtmlBundle, normalizeArchivePath } from "../lib/archive";
 import { createDocumentId, isDocumentId } from "../lib/ids";
 import { contentTypeForPath } from "../lib/mime";
 import { configuredPublicOrigin, publicOriginFromHeaders } from "../lib/public-url";
+import { isThemeId, THEMES, THEME_STORAGE_KEY } from "../lib/themes";
+
+test("offers five light and five dark persistent browser themes", () => {
+  assert.equal(THEMES.length, 10);
+  assert.equal(THEMES.filter((theme) => theme.mode === "light").length, 5);
+  assert.equal(THEMES.filter((theme) => theme.mode === "dark").length, 5);
+  assert.equal(new Set(THEMES.map((theme) => theme.value)).size, THEMES.length);
+  assert.equal(THEME_STORAGE_KEY, "szeruj-theme");
+  assert.equal(isThemeId("graphite"), true);
+  assert.equal(isThemeId("unknown"), false);
+
+  const styles = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+  const requiredVariables = [
+    "bg",
+    "bg-soft",
+    "panel",
+    "panel-strong",
+    "ink",
+    "muted",
+    "line",
+    "line-strong",
+    "accent",
+    "accent-strong",
+    "accent-soft",
+    "accent-ink",
+    "on-accent",
+    "secondary",
+    "secondary-soft",
+    "code-bg",
+    "code-ink",
+    "code-chrome",
+    "syntax-comment",
+    "syntax-keyword",
+    "syntax-string",
+    "syntax-number",
+    "syntax-title",
+    "syntax-variable",
+    "danger",
+    "shadow",
+  ];
+  for (const theme of THEMES) {
+    const selector = `:root\\[data-theme=["']${theme.value}["']\\]`;
+    const block = styles.match(new RegExp(`${selector}\\s*\\{([\\s\\S]*?)\\}`))?.[1];
+    assert.ok(block, `missing CSS block for ${theme.value}`);
+    for (const variable of requiredVariables) {
+      assert.match(block, new RegExp(`--${variable}:`), `${theme.value} is missing --${variable}`);
+    }
+    assert.match(block, new RegExp(`color-scheme:\\s*${theme.mode}`));
+  }
+});
 
 test("generates 22-character, URL-safe document IDs", () => {
   const ids = new Set(Array.from({ length: 100 }, () => createDocumentId()));
