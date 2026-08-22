@@ -28,7 +28,10 @@ type PreparedDocument = {
   entryPath: string | null;
   byteSize: number;
   files: ExtractedFile[];
+  originalArchive: Uint8Array | null;
 };
+
+type StoredDocumentObject = ExtractedFile & { key: string };
 
 const encoder = new TextEncoder();
 
@@ -67,7 +70,43 @@ function prepareText(kind: "markdown" | "html", title: unknown, content: unknown
     entryPath: kind === "html" ? filename : null,
     byteSize: bytes.byteLength,
     files: [{ path: filename, bytes, contentType: contentTypeForPath(filename) }],
+    originalArchive: null,
   } satisfies PreparedDocument;
+}
+
+function prepareZip(bytes: Uint8Array, title: unknown, originalName: string) {
+  const bundle = extractHtmlBundle(bytes);
+  return {
+    title: cleanTitle(title, titleFromFilename(originalName)),
+    kind: "bundle",
+    originalName,
+    entryPath: bundle.entryPath,
+    byteSize: bundle.byteSize,
+    files: bundle.files,
+    originalArchive: bytes,
+  } satisfies PreparedDocument;
+}
+
+function decodedUploadHeader(request: Request, name: string) {
+  const value = request.headers.get(name);
+  if (!value) return null;
+  if (value.length > 1024) throw new DocumentInputError(`Nagłówek „${name}” jest za długi.`);
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    throw new DocumentInputError(`Nagłówek „${name}” ma nieprawidłowe kodowanie.`);
+  }
+}
+
+async function prepareRawZip(request: Request): Promise<PreparedDocument> {
+  const declaredLength = Number(request.headers.get("content-length") ?? 0);
+  if (declaredLength > UPLOAD_LIMITS.zipBytes) {
+    throw new DocumentInputError("ZIP jest za duży. Maksymalny rozmiar to 100 MB.", 413);
+  }
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  const originalName = decodedUploadHeader(request, "x-szeruj-filename") || "bundle.zip";
+  const title = decodedUploadHeader(request, "x-szeruj-title");
+  return prepareZip(bytes, title, originalName);
 }
 
 async function prepareMultipart(request: Request): Promise<PreparedDocument> {
@@ -84,15 +123,7 @@ async function prepareMultipart(request: Request): Promise<PreparedDocument> {
   const bytes = new Uint8Array(await item.arrayBuffer());
 
   if (extension === "zip" || item.type === "application/zip" || item.type === "application/x-zip-compressed") {
-    const bundle = extractHtmlBundle(bytes);
-    return {
-      title: cleanTitle(title, titleFromFilename(originalName)),
-      kind: "bundle",
-      originalName,
-      entryPath: bundle.entryPath,
-      byteSize: bundle.byteSize,
-      files: bundle.files,
-    };
+    return prepareZip(bytes, title, originalName);
   }
 
   if (bytes.byteLength > UPLOAD_LIMITS.singleFileBytes) {
@@ -118,21 +149,26 @@ async function prepareJson(request: Request): Promise<PreparedDocument> {
 
 async function prepareRequest(request: Request) {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+  if (contentType.includes("application/zip") || contentType.includes("application/x-zip-compressed")) {
+    return prepareRawZip(request);
+  }
   if (contentType.includes("multipart/form-data")) return prepareMultipart(request);
   if (contentType.includes("application/json")) return prepareJson(request);
-  throw new DocumentInputError("Użyj application/json albo multipart/form-data.", 415);
+  throw new DocumentInputError(
+    "Użyj application/json, application/zip albo multipart/form-data.",
+    415
+  );
 }
 
-async function putFiles(id: string, files: ExtractedFile[]) {
+async function putFiles(files: StoredDocumentObject[]) {
   const attempted: string[] = [];
   try {
     for (let offset = 0; offset < files.length; offset += 10) {
       const group = files.slice(offset, offset + 10);
       await Promise.all(
         group.map((file) => {
-          const key = `documents/${id}/${file.path}`;
-          attempted.push(key);
-          return putStoredFile(key, file.bytes, file.contentType);
+          attempted.push(file.key);
+          return putStoredFile(file.key, file.bytes, file.contentType);
         })
       );
     }
@@ -158,14 +194,24 @@ export async function createDocument(request: Request) {
     createdAt: now,
     updatedAt: now,
   };
-  await putFiles(id, prepared.files);
+  const storedFiles: StoredDocumentObject[] = prepared.files.map((file) => ({
+    ...file,
+    key: `documents/${id}/${file.path}`,
+  }));
+  if (prepared.originalArchive) {
+    storedFiles.push({
+      key: `archives/${id}.zip`,
+      path: `${id}.zip`,
+      bytes: prepared.originalArchive,
+      contentType: "application/zip",
+    });
+  }
+  await putFiles(storedFiles);
 
   try {
     return await insertDocumentRecord(record);
   } catch (error) {
-    await deleteStoredFiles(
-      prepared.files.map((file) => `documents/${id}/${file.path}`)
-    ).catch(() => undefined);
+    await deleteStoredFiles(storedFiles.map((file) => file.key)).catch(() => undefined);
     throw error;
   }
 }
@@ -212,6 +258,7 @@ export async function deleteDocument(id: string) {
   const record = await getDocument(id);
   if (!record) return false;
   const keys = await listStoredFileKeys(`documents/${id}/`);
+  if (record.kind === "bundle") keys.push(`archives/${id}.zip`);
   if (keys.length) await deleteStoredFiles(keys);
   return deleteDocumentRecord(id);
 }

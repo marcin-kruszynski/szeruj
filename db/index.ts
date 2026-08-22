@@ -18,6 +18,7 @@ type DocumentRow = {
 
 export type StoredFile = {
   body: BodyInit;
+  bytes: Uint8Array;
   text(): Promise<string>;
 };
 
@@ -215,6 +216,7 @@ export async function getStoredFile(key: string): Promise<StoredFile | null> {
     bytes.set(buffer);
     return {
       body: bytes,
+      bytes,
       text: async () => new TextDecoder().decode(bytes),
     };
   } catch (error) {

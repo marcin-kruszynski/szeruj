@@ -17,6 +17,7 @@ frontendu dla każdego dokumentu i bez ceremonii.
 - GitHub Flavored Markdown z tabelami, checklistami, listami i kolorowaniem kodu,
 - przycisk kopiowania przy każdym bloku kodu,
 - samodzielny HTML oraz paczki ZIP z CSS-em, JavaScriptem, grafikami i fontami,
+- pobieranie źródłowego Markdownu, HTML-u albo kompletnej paczki ZIP,
 - trudne do odgadnięcia publiczne linki (22 znaki, 132 bity losowości),
 - panel admina do tworzenia, wyszukiwania, edycji Markdownu i usuwania,
 - proste API Bearer dla agentów,
@@ -70,7 +71,7 @@ Wszystko, co zależy od instalacji, mieszka w `.env`:
 | `SZERUJ_BIND_ADDRESS` | `0.0.0.0` | Interfejs, na którym Docker publikuje usługę |
 | `SZERUJ_PORT` | `8369` | Port na hoście |
 | `SZERUJ_DATA_PATH` | `./data` | Katalog bazy SQLite i plików |
-| `SZERUJ_MEMORY_LIMIT` | `384m` | Limit pamięci kontenera |
+| `SZERUJ_MEMORY_LIMIT` | `2g` | Limit pamięci kontenera, potrzebny przy dużych ZIP-ach |
 | `SZERUJ_UID` / `SZERUJ_GID` | `1000` | Właściciel danych na hoście |
 | `SZERUJ_IMAGE` | `szeruj:local` | Nazwa lokalnego obrazu |
 | `SZERUJ_CONTAINER_NAME` | `szeruj` | Nazwa kontenera |
@@ -238,14 +239,20 @@ curl -X POST http://szeruj.local:8369/api/v1/documents \
   -d '{"type":"markdown","title":"Raport agenta","content":"## Gotowe\n\nTreść raportu."}'
 ```
 
-Plik `.md`, `.markdown`, `.html`, `.htm` albo `.zip` wyślesz jako formularz:
+Plik `.md`, `.markdown`, `.html` albo `.htm` wyślesz jako formularz. ZIP-y,
+zwłaszcza duże, wysyłaj jako surowe `application/zip`, aby serwer nie musiał
+buforować multipart drugi raz:
 
 ```bash
 curl -X POST http://szeruj.local:8369/api/v1/documents \
   -H "Authorization: Bearer $API_TOKEN" \
-  -F "title=Interaktywny raport" \
-  -F "file=@./raport.zip"
+  -H "Content-Type: application/zip" \
+  -H "X-Szeruj-Filename: raport.zip" \
+  -H "X-Szeruj-Title: Interaktywny%20raport" \
+  --data-binary @./raport.zip
 ```
+
+Oficjalny klient `share.py` wybiera ten wydajniejszy transport automatycznie.
 
 Odpowiedź `201` zawiera obiekt `document` i gotowe pole `url`. Jego domena
 pochodzi z `SZERUJ_PUBLIC_URL`, więc agent od razu oddaje właściwy link.
@@ -263,9 +270,10 @@ pochodzi z `SZERUJ_PUBLIC_URL`, więc agent od razu oddaje właściwy link.
   kwot, moderacji i ochrony przed nadużyciami — ta aplikacja celowo nie udaje
   kompletnego publicznego hostingu plików.
 
-Paczka ZIP może mieć najwyżej 15 MB, 50 MB po rozpakowaniu, 250 plików i 12 MB
-na pojedynczy plik. Serwer odrzuca niebezpieczne ścieżki, duplikaty oraz ZIP-y
-bez wejściowego HTML-u.
+Paczka ZIP może mieć najwyżej 100 MB, 300 MB po rozpakowaniu, 250 plików i
+300 MB na pojedynczy plik. Serwer odrzuca niebezpieczne ścieżki, duplikaty oraz
+ZIP-y bez wejściowego HTML-u. Limit pamięci `2g` jest górnym pułapem na czas
+przetwarzania dużej paczki, a nie rezerwacją RAM-u podczas zwykłej pracy.
 
 ## Dane, backup i aktualizacja
 

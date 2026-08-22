@@ -9,7 +9,7 @@ services:
     container_name: ${SZERUJ_CONTAINER_NAME:-szeruj}
     restart: unless-stopped
     init: true
-    mem_limit: ${SZERUJ_MEMORY_LIMIT:-384m}
+    mem_limit: ${SZERUJ_MEMORY_LIMIT:-2g}
     user: "${SZERUJ_UID:-1000}:${SZERUJ_GID:-1000}"
     ports:
       - "${SZERUJ_BIND_ADDRESS:-0.0.0.0}:${SZERUJ_PORT:-8369}:3000"

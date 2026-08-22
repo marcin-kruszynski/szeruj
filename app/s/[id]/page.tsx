@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ExternalLink, FileArchive, FileCode2, FileText } from "lucide-react";
+import { Download, ExternalLink, FileArchive, FileCode2, FileText } from "lucide-react";
 import { Brand } from "@/components/Brand";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { MarkdownDocument } from "@/components/MarkdownDocument";
@@ -47,6 +47,15 @@ export default async function SharedDocumentPage({ params }: PageProps) {
         </div>
         <div className="share-actions">
           {contentUrl && <a className="icon-button" href={contentUrl} target="_blank" rel="noreferrer" aria-label="Otwórz sam dokument"><ExternalLink size={17} /></a>}
+          <a
+            className="icon-button"
+            href={`/s/${id}/download`}
+            download
+            aria-label={`Pobierz ${DOCUMENT_KIND_LABEL[document.kind]}`}
+            title={`Pobierz ${DOCUMENT_KIND_LABEL[document.kind]}`}
+          >
+            <Download size={17} />
+          </a>
           <ThemePicker compact />
           <CopyLinkButton compact />
         </div>

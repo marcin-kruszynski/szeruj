@@ -302,6 +302,22 @@ def multipart_payload(path: Path, title: str | None) -> tuple[bytes, str]:
     return b"".join(chunks), f"multipart/form-data; boundary={boundary}"
 
 
+def raw_zip_payload(path: Path, title: str | None) -> tuple[bytes, str, dict[str, str]]:
+    if path.suffix.lower() != ".zip":
+        raise ShareError("Surowy upload jest obsługiwany wyłącznie dla plików .zip.")
+    if not path.is_file():
+        raise ShareError(f"Nie znaleziono pliku: {path}")
+    try:
+        file_bytes = path.read_bytes()
+    except OSError as error:
+        raise ShareError(f"Nie można odczytać pliku {path}: {error}") from error
+
+    headers = {"X-Szeruj-Filename": urllib.parse.quote(path.name, safe="")}
+    if title:
+        headers["X-Szeruj-Title"] = urllib.parse.quote(title, safe="")
+    return file_bytes, "application/zip", headers
+
+
 def json_payload(document_type: str | None, title: str | None) -> tuple[bytes, str]:
     if document_type not in {"markdown", "html"}:
         raise ShareError("Przy --stdin podaj --type markdown albo --type html.")
@@ -322,7 +338,7 @@ def json_payload(document_type: str | None, title: str | None) -> tuple[bytes, s
 def verify_url(url: str, timeout: float) -> tuple[bool, int | None, str | None]:
     request = urllib.request.Request(
         url,
-        headers={"Accept": "text/html,*/*;q=0.8", "User-Agent": "szeruj-skill/1.2"},
+        headers={"Accept": "text/html,*/*;q=0.8", "User-Agent": "szeruj-skill/1.3"},
         method="GET",
     )
     try:
@@ -348,8 +364,13 @@ def check_server(base_url: str, timeout: float, output_json: bool) -> int:
 
 def publish(args: argparse.Namespace, config: dict[str, str], base_url: str) -> int:
     token = resolve_token(config)
+    extra_headers: dict[str, str] = {}
     if args.file:
-        body, content_type = multipart_payload(args.file.resolve(), args.title)
+        path = args.file.resolve()
+        if path.suffix.lower() == ".zip":
+            body, content_type, extra_headers = raw_zip_payload(path, args.title)
+        else:
+            body, content_type = multipart_payload(path, args.title)
     else:
         body, content_type = json_payload(args.document_type, args.title)
 
@@ -360,7 +381,8 @@ def publish(args: argparse.Namespace, config: dict[str, str], base_url: str) -> 
             "Accept": "application/json",
             "Authorization": f"Bearer {token}",
             "Content-Type": content_type,
-            "User-Agent": "szeruj-skill/1.2",
+            "User-Agent": "szeruj-skill/1.3",
+            **extra_headers,
         },
         method="POST",
     )
@@ -428,7 +450,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Jawny plik konfiguracji; z --configure wybiera miejsce zapisu.",
     )
     parser.add_argument("--force", action="store_true", help="Zastąp istniejącą konfigurację.")
-    parser.add_argument("--timeout", type=float, default=60.0, help="Timeout żądania w sekundach.")
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=300.0,
+        help="Timeout żądania w sekundach (domyślnie 300 dla dużych ZIP-ów).",
+    )
     parser.add_argument("--no-verify", action="store_true", help="Nie otwieraj kontrolnie publicznego URL-u.")
     parser.add_argument("--json", dest="output_json", action="store_true", help="Wypisz wynik jako JSON.")
     return parser

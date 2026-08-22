@@ -21,6 +21,24 @@ SPEC.loader.exec_module(share)
 
 
 class GlobalConfigurationTests(unittest.TestCase):
+    def test_default_timeout_supports_large_archives(self) -> None:
+        args = share.build_parser().parse_args(["--check"])
+        self.assertEqual(args.timeout, 300.0)
+
+    def test_zip_uses_raw_upload_headers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            archive = Path(temporary_directory) / "raport ą.zip"
+            archive.write_bytes(b"PK test")
+            body, content_type, headers = share.raw_zip_payload(
+                archive,
+                "Duży raport",
+            )
+
+        self.assertEqual(body, b"PK test")
+        self.assertEqual(content_type, "application/zip")
+        self.assertEqual(headers["X-Szeruj-Filename"], "raport%20%C4%85.zip")
+        self.assertEqual(headers["X-Szeruj-Title"], "Du%C5%BCy%20raport")
+
     def test_linux_default_path(self) -> None:
         with (
             mock.patch.dict(os.environ, {}, clear=True),

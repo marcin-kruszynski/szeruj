@@ -27,17 +27,27 @@ Używaj dla Markdownu albo pojedynczego HTML-u:
 `type` przyjmuje `markdown` albo `html`. Treść musi być UTF-8 i mieć najwyżej
 5 MB.
 
-## Multipart
+## Upload pliku
 
-Użyj pola `file` dla `.md`, `.markdown`, `.html`, `.htm` albo `.zip`.
+Użyj multipart z polem `file` dla `.md`, `.markdown`, `.html` albo `.htm`.
 Opcjonalne pole `title` nadpisuje tytuł wyprowadzony z nazwy pliku.
+
+ZIP wysyłaj wydajniejszym surowym transportem:
+
+- `Content-Type: application/zip`,
+- ciało żądania: dokładne bajty archiwum,
+- `X-Szeruj-Filename`: nazwa pliku zakodowana przez percent-encoding,
+- opcjonalny `X-Szeruj-Title`: tytuł zakodowany przez percent-encoding.
+
+Klient `share.py` wybiera ten transport automatycznie. Multipart dla ZIP-a
+pozostaje obsługiwany dla zgodności ze starszymi klientami.
 
 Limity ZIP-a:
 
-- 15 MB archiwum,
-- 50 MB po rozpakowaniu,
+- 100 MB archiwum,
+- 300 MB po rozpakowaniu,
 - 250 plików,
-- 12 MB na pojedynczy rozpakowany plik,
+- 300 MB na pojedynczy rozpakowany plik,
 - co najmniej jeden `.html` albo `.htm`.
 
 Serwer odrzuca ścieżki bezwzględne, `..`, backslashe, puste segmenty, duplikaty

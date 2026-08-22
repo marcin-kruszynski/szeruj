@@ -193,8 +193,15 @@ function CreateDocument({ onCreated, onCancel }: { onCreated: (doc: PublicDocume
         response = await fetch("/api/admin/documents", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type: "markdown", title, content }) });
       } else {
         if (!file) throw new Error("Wybierz plik do przesłania.");
-        const form = new FormData(); form.set("title", title); form.set("file", file);
-        response = await fetch("/api/admin/documents", { method: "POST", body: form });
+        const isZip = /\.zip$/i.test(file.name) || file.type === "application/zip" || file.type === "application/x-zip-compressed";
+        if (isZip) {
+          const headers: Record<string, string> = { "content-type": "application/zip", "x-szeruj-filename": encodeURIComponent(file.name) };
+          if (title.trim()) headers["x-szeruj-title"] = encodeURIComponent(title.trim());
+          response = await fetch("/api/admin/documents", { method: "POST", headers, body: file });
+        } else {
+          const form = new FormData(); form.set("title", title); form.set("file", file);
+          response = await fetch("/api/admin/documents", { method: "POST", body: form });
+        }
       }
       const result = await jsonResult<{ document: PublicDocument }>(response);
       onCreated(result.document);
@@ -210,7 +217,7 @@ function CreateDocument({ onCreated, onCancel }: { onCreated: (doc: PublicDocume
       <button type="button" className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}><UploadCloud size={20} /><span><b>Prześlij plik</b><small>Markdown, HTML albo ZIP</small></span></button>
     </div>
     <label className="field-label"><span>Tytuł</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={mode === "markdown" ? "Np. Analiza kampanii Q3" : "Opcjonalnie — użyjemy nazwy pliku"} maxLength={180} /></label>
-    {mode === "markdown" ? <div className="editor-grid"><label><span>Markdown</span><textarea value={content} onChange={(event) => setContent(event.target.value)} spellCheck={false} /></label><div><span>Podgląd</span><div className="editor-preview"><MarkdownDocument content={content} /></div></div></div> : <button type="button" className="drop-zone" onClick={() => fileRef.current?.click()}><input ref={fileRef} type="file" accept=".md,.markdown,.html,.htm,.zip,text/markdown,text/html,application/zip" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><span className="drop-icon"><UploadCloud size={26} /></span><b>{file ? file.name : "Kliknij, aby wybrać plik"}</b><p>{file ? formatBytes(file.size) : ".md i .html do 5 MB · .zip do 15 MB"}</p></button>}
+    {mode === "markdown" ? <div className="editor-grid"><label><span>Markdown</span><textarea value={content} onChange={(event) => setContent(event.target.value)} spellCheck={false} /></label><div><span>Podgląd</span><div className="editor-preview"><MarkdownDocument content={content} /></div></div></div> : <button type="button" className="drop-zone" onClick={() => fileRef.current?.click()}><input ref={fileRef} type="file" accept=".md,.markdown,.html,.htm,.zip,text/markdown,text/html,application/zip" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><span className="drop-icon"><UploadCloud size={26} /></span><b>{file ? file.name : "Kliknij, aby wybrać plik"}</b><p>{file ? formatBytes(file.size) : ".md i .html do 5 MB · .zip do 100 MB"}</p></button>}
     {error && <p className="form-error" role="alert">{error}</p>}
     <div className="create-footer"><p>Po publikacji powstanie losowy publiczny link.</p><button className="button button-primary" disabled={busy}>{busy ? <LoaderCircle className="spin" size={18} /> : <><UploadCloud size={18} /> Opublikuj</>}</button></div>
   </form>;

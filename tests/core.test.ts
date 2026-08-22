@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { zipSync, strToU8 } from "fflate";
+import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MarkdownDocument } from "../components/MarkdownDocument";
-import { extractHtmlBundle, normalizeArchivePath } from "../lib/archive";
+import { extractHtmlBundle, normalizeArchivePath, UPLOAD_LIMITS } from "../lib/archive";
 import { createDocumentId, isDocumentId } from "../lib/ids";
+import { attachmentDisposition, downloadFilename, zipDownloadFiles } from "../lib/downloads";
 import { contentTypeForPath } from "../lib/mime";
 import { configuredPublicOrigin, publicOriginFromHeaders } from "../lib/public-url";
 import { isThemeId, THEMES, THEME_STORAGE_KEY } from "../lib/themes";
@@ -89,9 +90,69 @@ test("extracts an HTML bundle and prefers root index.html", () => {
   assert.ok(bundle.byteSize > 0);
 });
 
+test("accepts a ZIP larger than the previous 15 MB limit", () => {
+  const sqlite = new Uint8Array(16 * 1024 * 1024);
+  sqlite.set(strToU8("SQLite format 3\0"));
+  const html = strToU8("<a href=\"data/archive.sqlite\">Pobierz bazę</a>");
+  const archive = zipSync(
+    {
+      "index.html": html,
+      "data/archive.sqlite": sqlite,
+    },
+    { level: 0 }
+  );
+
+  assert.ok(archive.byteLength > 15 * 1024 * 1024);
+  assert.equal(UPLOAD_LIMITS.zipBytes, 100 * 1024 * 1024);
+  assert.equal(UPLOAD_LIMITS.expandedBytes, 300 * 1024 * 1024);
+  assert.equal(UPLOAD_LIMITS.archiveFileBytes, 300 * 1024 * 1024);
+  const bundle = extractHtmlBundle(archive);
+  assert.equal(bundle.files.length, 2);
+  assert.equal(bundle.byteSize, sqlite.byteLength + html.byteLength);
+});
+
 test("rejects ZIP without an HTML entry", () => {
   const archive = zipSync({ "README.txt": strToU8("hello") });
   assert.throws(() => extractHtmlBundle(archive), /HTML/);
+});
+
+test("builds safe, format-aware download filenames", () => {
+  assert.equal(
+    downloadFilename({
+      id: "document-id",
+      title: "Nieużywany tytuł",
+      kind: "markdown",
+      originalName: "folder\\raport końcowy.markdown",
+      entryPath: null,
+    }),
+    "raport końcowy.markdown"
+  );
+
+  const generated = downloadFilename({
+    id: "document-id",
+    title: "Raport: Q3 / analiza",
+    kind: "html",
+    originalName: null,
+    entryPath: "index.html",
+  });
+  assert.equal(generated, "Raport- Q3 - analiza.html");
+  assert.doesNotMatch(generated, /[<>:"/\\|?*\u0000-\u001f\u007f]/);
+
+  const disposition = attachmentDisposition("wyniki (Łódź).zip");
+  assert.match(disposition, /^attachment; filename=/);
+  assert.match(disposition, /filename\*=UTF-8''wyniki%20%28%C5%81%C3%B3d%C5%BA%29\.zip$/);
+  assert.doesNotMatch(disposition, /[\r\n]/);
+});
+
+test("creates a complete ZIP download with nested assets", () => {
+  const archive = zipDownloadFiles([
+    { path: "index.html", bytes: strToU8("<link rel=\"stylesheet\" href=\"assets/app.css\">") },
+    { path: "assets/app.css", bytes: strToU8("body { color: tomato; }") },
+    { path: "assets/data.txt", bytes: strToU8("pełna paczka") },
+  ]);
+  const files = unzipSync(archive);
+  assert.deepEqual(Object.keys(files).sort(), ["assets/app.css", "assets/data.txt", "index.html"]);
+  assert.equal(strFromU8(files["assets/data.txt"]), "pełna paczka");
 });
 
 test("maps content types used by HTML bundles", () => {

@@ -1,11 +1,13 @@
 import { Unzip, UnzipInflate } from "fflate";
 import { contentTypeForPath, isHtmlPath } from "./mime";
 
+const MEBIBYTE = 1024 * 1024;
+
 export const UPLOAD_LIMITS = {
-  singleFileBytes: 5 * 1024 * 1024,
-  zipBytes: 15 * 1024 * 1024,
-  expandedBytes: 50 * 1024 * 1024,
-  archiveFileBytes: 12 * 1024 * 1024,
+  singleFileBytes: 5 * MEBIBYTE,
+  zipBytes: 100 * MEBIBYTE,
+  expandedBytes: 300 * MEBIBYTE,
+  archiveFileBytes: 300 * MEBIBYTE,
   archiveFiles: 250,
 } as const;
 
@@ -71,7 +73,7 @@ function joinChunks(chunks: Uint8Array[], size: number) {
 
 export function extractHtmlBundle(archive: Uint8Array): ExtractedBundle {
   if (archive.byteLength > UPLOAD_LIMITS.zipBytes) {
-    throw new DocumentInputError("ZIP jest za duży. Maksymalny rozmiar to 15 MB.", 413);
+    throw new DocumentInputError("ZIP jest za duży. Maksymalny rozmiar to 100 MB.", 413);
   }
 
   const files: ExtractedFile[] = [];
@@ -116,11 +118,14 @@ export function extractHtmlBundle(archive: Uint8Array): ExtractedBundle {
     if (file.originalSize !== undefined) {
       declaredBytes += file.originalSize;
       if (file.originalSize > UPLOAD_LIMITS.archiveFileBytes) {
-        failure = new DocumentInputError(`Plik „${path}” po rozpakowaniu jest za duży.`, 413);
+        failure = new DocumentInputError(
+          `Plik „${path}” po rozpakowaniu przekracza limit 300 MB.`,
+          413
+        );
         return;
       }
       if (declaredBytes > UPLOAD_LIMITS.expandedBytes) {
-        failure = new DocumentInputError("ZIP po rozpakowaniu przekracza limit 50 MB.", 413);
+        failure = new DocumentInputError("ZIP po rozpakowaniu przekracza limit 300 MB.", 413);
         return;
       }
     }
@@ -137,12 +142,15 @@ export function extractHtmlBundle(archive: Uint8Array): ExtractedBundle {
       fileBytes += chunk.byteLength;
       expandedBytes += chunk.byteLength;
       if (fileBytes > UPLOAD_LIMITS.archiveFileBytes) {
-        failure = new DocumentInputError(`Plik „${path}” po rozpakowaniu jest za duży.`, 413);
+        failure = new DocumentInputError(
+          `Plik „${path}” po rozpakowaniu przekracza limit 300 MB.`,
+          413
+        );
         file.terminate();
         return;
       }
       if (expandedBytes > UPLOAD_LIMITS.expandedBytes) {
-        failure = new DocumentInputError("ZIP po rozpakowaniu przekracza limit 50 MB.", 413);
+        failure = new DocumentInputError("ZIP po rozpakowaniu przekracza limit 300 MB.", 413);
         file.terminate();
         return;
       }
