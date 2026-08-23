@@ -35,6 +35,7 @@ test("offers five light and five dark persistent browser themes", () => {
     "accent-soft",
     "accent-ink",
     "on-accent",
+    "on-danger",
     "secondary",
     "secondary-soft",
     "code-bg",

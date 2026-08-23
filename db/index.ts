@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, readdir, rename, rmdir, unlink, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, rename, rmdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { DocumentKind, DocumentRecord } from "@/lib/models";
@@ -184,6 +184,18 @@ export async function updateDocumentRecord(
   return mapDocument(row as unknown as DocumentRow);
 }
 
+export async function rekeyDocumentRecord(id: string, nextId: string, updatedAt: string) {
+  await ensureSchema();
+  const result = database().prepare(`
+    UPDATE documents
+    SET id = ?, updated_at = ?
+    WHERE id = ?
+  `).run(nextId, updatedAt, id);
+  if (result.changes === 0) return null;
+  const row = database().prepare("SELECT * FROM documents WHERE id = ?").get(nextId);
+  return mapDocument(row as unknown as DocumentRow);
+}
+
 export async function deleteDocumentRecord(id: string) {
   await ensureSchema();
   return database().prepare("DELETE FROM documents WHERE id = ?").run(id).changes > 0;
@@ -204,6 +216,26 @@ export async function putStoredFile(
     await rename(temporary, target);
   } catch (error) {
     await unlink(temporary).catch(() => undefined);
+    throw error;
+  }
+}
+
+export async function moveStoredPath(sourceKey: string, targetKey: string) {
+  await ensureSchema();
+  const source = safeStoragePath(sourceKey);
+  const target = safeStoragePath(targetKey);
+  try {
+    await access(target);
+    throw new Error("Docelowa ścieżka magazynu już istnieje.");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  await mkdir(path.dirname(target), { recursive: true });
+  try {
+    await rename(source, target);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw error;
   }
 }

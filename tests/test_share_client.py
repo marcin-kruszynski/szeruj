@@ -21,6 +21,15 @@ SPEC.loader.exec_module(share)
 
 
 class GlobalConfigurationTests(unittest.TestCase):
+    def test_success_message_uses_supported_wordplay_and_keeps_url(self) -> None:
+        url = "https://szeruj.local/s/abc123"
+
+        for template in share.SUCCESS_MESSAGES:
+            with self.subTest(template=template):
+                self.assertEqual(template.count("{url}"), 1)
+                with mock.patch.object(share.secrets, "choice", return_value=template):
+                    self.assertEqual(share.success_message(url), template.format(url=url))
+
     def test_default_timeout_supports_large_archives(self) -> None:
         args = share.build_parser().parse_args(["--check"])
         self.assertEqual(args.timeout, 300.0)

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Download, ExternalLink, FileArchive, FileCode2, FileText } from "lucide-react";
-import { Brand } from "@/components/Brand";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
+import { ContextualBrand } from "@/components/ContextualBrand";
 import { MarkdownDocument } from "@/components/MarkdownDocument";
 import { ThemePicker } from "@/components/ThemePicker";
 import { getDocument, getMarkdownContent } from "@/lib/documents";
@@ -38,24 +38,26 @@ export default async function SharedDocumentPage({ params }: PageProps) {
   const contentUrl = document.entryPath ? `/content/${id}/${encodedPath(document.entryPath)}` : null;
 
   return (
-    <main className={`share-shell ${document.kind !== "markdown" ? "share-shell-html" : ""}`}>
+    <main className={`share-shell ${document.kind !== "markdown" ? "share-shell-html" : ""}`} id="main-content">
       <header className="share-toolbar">
-        <Brand />
+        <ContextualBrand />
         <div className="share-title">
-          <span className="document-type-icon"><Icon size={17} /></span>
-          <div><h1>{document.title}</h1><p>{DOCUMENT_KIND_LABEL[document.kind]}</p></div>
+          <span className="document-type-icon"><Icon size={17} aria-hidden="true" /></span>
+          <div><h1 title={document.title}>{document.title}</h1><p>{DOCUMENT_KIND_LABEL[document.kind]}</p></div>
         </div>
         <div className="share-actions">
-          {contentUrl && <a className="icon-button" href={contentUrl} target="_blank" rel="noreferrer" aria-label="Otwórz sam dokument"><ExternalLink size={17} /></a>}
-          <a
-            className="icon-button"
-            href={`/s/${id}/download`}
-            download
-            aria-label={`Pobierz ${DOCUMENT_KIND_LABEL[document.kind]}`}
-            title={`Pobierz ${DOCUMENT_KIND_LABEL[document.kind]}`}
-          >
-            <Download size={17} />
-          </a>
+          <div className="share-action-group">
+            {contentUrl && <a className="icon-button" href={contentUrl} target="_blank" rel="noreferrer" aria-label="Otwórz sam dokument" title="Otwórz sam dokument"><ExternalLink size={17} /></a>}
+            <a
+              className="icon-button"
+              href={`/s/${id}/download`}
+              download
+              aria-label={`Pobierz ${DOCUMENT_KIND_LABEL[document.kind]}`}
+              title={`Pobierz ${DOCUMENT_KIND_LABEL[document.kind]}`}
+            >
+              <Download size={17} />
+            </a>
+          </div>
           <ThemePicker compact />
           <CopyLinkButton compact />
         </div>

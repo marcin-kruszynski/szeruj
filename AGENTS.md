@@ -94,7 +94,7 @@ Po zmianie `.env` albo aktualizacji kodu zastosuj konfigurację poleceniem:
 docker compose up -d --build --force-recreate
 ```
 
-## 2. Zainstaluj globalny skill „Hej, szeruj”
+## 2. Zainstaluj globalny skill „Szeruj”
 
 Skill instaluje się raz dla bieżącego konta systemowego i działa później we
 wszystkich projektach tego użytkownika.
@@ -155,7 +155,7 @@ python3 "${CODEX_HOME:-$HOME/.codex}/skills/szeruj/scripts/share.py" --check
 ```
 
 Po instalacji uruchom ponownie Codex, aby nowe sesje wykryły skill. Od tej chwili
-polecenie „Hej, szeruj” ma działać z dowolnego katalogu.
+polecenie „Szeruj” ma działać z dowolnego katalogu.
 
 ## 3. Praca developerska
 

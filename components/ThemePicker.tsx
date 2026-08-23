@@ -18,6 +18,16 @@ function preferredTheme(): ThemeId {
     : DEFAULT_LIGHT_THEME;
 }
 
+function syncThemeColor() {
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = "theme-color";
+    document.head.append(meta);
+  }
+  meta.content = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+}
+
 export function ThemePicker({ compact = false }: { compact?: boolean }) {
   const [theme, setTheme] = useState<ThemeId>(DEFAULT_LIGHT_THEME);
 
@@ -25,6 +35,7 @@ export function ThemePicker({ compact = false }: { compact?: boolean }) {
     function applyTheme(value: string | null | undefined) {
       const nextTheme = isThemeId(value) ? value : preferredTheme();
       document.documentElement.dataset.theme = nextTheme;
+      syncThemeColor();
       setTheme(nextTheme);
     }
 
@@ -39,6 +50,7 @@ export function ThemePicker({ compact = false }: { compact?: boolean }) {
   function changeTheme(value: string) {
     if (!isThemeId(value)) return;
     document.documentElement.dataset.theme = value;
+    syncThemeColor();
     try {
       localStorage.setItem(THEME_STORAGE_KEY, value);
     } catch {

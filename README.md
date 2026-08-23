@@ -3,13 +3,38 @@
 [![CI](https://github.com/marcin-kruszynski/szeruj/actions/workflows/ci.yml/badge.svg)](https://github.com/marcin-kruszynski/szeruj/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/licencja-MIT-164e42.svg)](LICENSE)
 
-> Wrzuć. Otwórz. Szeruj.
+> Gotowy wynik. Jeden link.
 
-Masz raport od agenta, ładny Markdown albo małą stronę z wykresem i chcesz po
-prostu wysłać komuś link? Szeruj robi właśnie to — bez stawiania osobnego
-frontendu dla każdego dokumentu i bez ceremonii.
+Szeruj to własny, stale działający punkt publikacji dla agentów. Wysyłasz
+Markdown, gotowy HTML albo ZIP z zasobami i od razu dostajesz estetyczny,
+trudny do odgadnięcia adres — bez osobnego repozytorium, builda i wdrożenia.
 
-![Szeruj — Markdown, HTML i paczki ZIP pod jednym linkiem](public/og.png)
+![Szeruj — Wrzuć. Otwórz. Szeruj.](public/og.png)
+
+## Do czego służy Szeruj?
+
+Szeruj obsługuje ten konkretny moment pracy: agent właśnie skończył raport,
+analizę albo interaktywną stronę i chcesz wysłać wynik teraz, bez tworzenia
+kolejnego projektu oraz pipeline’u.
+
+Nie musisz kopiować Markdownu do przypadkowego edytora ani tłumaczyć komuś,
+jak lokalnie uruchomić wygenerowany HTML. Mówisz po prostu **„Szeruj”**, a agent
+dobiera format, publikuje gotowy materiał i oddaje link, który od razu otwiera
+się w przeglądarce. Odbiorca dostaje czytelny dokument, a nie katalog projektu
+czy instrukcję uruchomienia.
+
+Najbardziej przydaje się do:
+
+- raportów z researchu, audytów i przeglądów kodu,
+- analiz, podsumowań i propozycji gotowych do omówienia,
+- interaktywnych wykresów, dashboardów i małych eksploratorów danych,
+- specyfikacji, instrukcji oraz dokumentów tworzonych w trakcie rozmowy z agentem,
+- paczek HTML z własnym CSS-em, JavaScriptem, grafikami albo danymi.
+
+Jedna instalacja staje się wspólną biblioteką rezultatów z wielu rozmów i
+projektów. Szeruj przechowuje je, izoluje uruchamiany HTML, pozwala je
+przeszukiwać, filtrować, pobierać i usuwać, a w razie potrzeby także unieważnić
+stary link bez zmiany samej treści.
 
 ## Co dostajesz
 
@@ -19,9 +44,11 @@ frontendu dla każdego dokumentu i bez ceremonii.
 - samodzielny HTML oraz paczki ZIP z CSS-em, JavaScriptem, grafikami i fontami,
 - pobieranie źródłowego Markdownu, HTML-u albo kompletnej paczki ZIP,
 - trudne do odgadnięcia publiczne linki (22 znaki, 132 bity losowości),
-- panel admina do tworzenia, wyszukiwania, edycji Markdownu i usuwania,
+- minimalistyczny panel admina z wyszukiwaniem i filtrami Markdown / HTML / ZIP,
+- losowanie nowego publicznego linku bez zmiany treści dokumentu,
+- tworzenie i edycja Markdownu oraz zarządzanie całą biblioteką,
 - proste API Bearer dla agentów,
-- gotowy globalny skill Codex wywoływany słowami „Hej, szeruj”,
+- gotowy globalny skill Codex wywoływany prostym poleceniem „Szeruj”,
 - lekki kontener: jeden serwer Node, SQLite i zwykły katalog z plikami.
 
 Jasne motywy to Papier, Poranek, Laguna, Łąka i Lawenda. Ciemne: Noc, Głębia,
@@ -89,7 +116,7 @@ Po zmianie konfiguracji odtwórz usługę:
 docker compose up -d --build --force-recreate
 ```
 
-## Skill „Hej, szeruj” w każdym projekcie
+## Skill „Szeruj” w każdym projekcie
 
 Skill instaluje się **raz dla danego konta systemowego**. Później widzi go każdy
 nowy agent Codex, niezależnie od katalogu projektu. Jeśli na maszynie pracuje
@@ -184,14 +211,15 @@ python3 ~/.codex/skills/szeruj/scripts/share.py --check
 I tyle. Od tej chwili w dowolnym projekcie możesz powiedzieć:
 
 ```text
-Hej, szeruj
+Szeruj
 ```
 
-Po publikacji agent odpowie dokładnie:
+Po publikacji klient losuje jedną z krótkich odpowiedzi. Link zawsze zostaje
+podany w tej samej, pojedynczej linii, na przykład:
 
-```text
-Hej, tutaj wrzuciłem <link>
-```
+- `Wyszerowane: <link>`
+- `Szernięte tu: <link>`
+- `Poszło w szer: <link>`
 
 ### Alternatywa: globalne zmienne środowiskowe
 

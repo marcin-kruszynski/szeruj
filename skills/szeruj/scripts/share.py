@@ -26,10 +26,21 @@ CONTENT_TYPES = {
     ".htm": "text/html; charset=utf-8",
     ".zip": "application/zip",
 }
+SUCCESS_MESSAGES = (
+    "Wyszerowane: {url}",
+    "Szernięte tu: {url}",
+    "Poszło w szer: {url}",
+)
 
 
 class ShareError(RuntimeError):
     """A safe, user-facing publication failure."""
+
+
+def success_message(url: str) -> str:
+    """Return one short, branded success line while preserving the exact URL."""
+
+    return secrets.choice(SUCCESS_MESSAGES).format(url=url)
 
 
 def parse_env_file(path: Path) -> dict[str, str]:
@@ -418,7 +429,7 @@ def publish(args: argparse.Namespace, config: dict[str, str], base_url: str) -> 
             )
         )
     else:
-        print(f"Hej, tutaj wrzuciłem {url}")
+        print(success_message(url))
         if verified is False:
             print(
                 "Uwaga: publikacja powiodła się, ale kontrolne otwarcie linku nie zostało "

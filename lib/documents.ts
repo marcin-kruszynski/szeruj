@@ -7,7 +7,9 @@ import {
   insertDocumentRecord,
   listDocumentRecords,
   listStoredFileKeys,
+  moveStoredPath,
   putStoredFile,
+  rekeyDocumentRecord,
   updateDocumentRecord,
 } from "@/db";
 import { createDocumentId, isDocumentId } from "./ids";
@@ -261,6 +263,49 @@ export async function deleteDocument(id: string) {
   if (record.kind === "bundle") keys.push(`archives/${id}.zip`);
   if (keys.length) await deleteStoredFiles(keys);
   return deleteDocumentRecord(id);
+}
+
+export async function regenerateDocumentLink(id: string) {
+  const record = await getDocument(id);
+  if (!record) throw new DocumentInputError("Nie znaleziono dokumentu.", 404);
+
+  let nextId: string | null = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const candidate = createDocumentId();
+    if (!(await getDocumentRecord(candidate))) {
+      nextId = candidate;
+      break;
+    }
+  }
+  if (!nextId) throw new Error("Nie udało się wygenerować wolnego identyfikatora dokumentu.");
+
+  const moves = [
+    { source: `documents/${id}`, target: `documents/${nextId}`, required: true },
+    ...(record.kind === "bundle"
+      ? [{ source: `archives/${id}.zip`, target: `archives/${nextId}.zip`, required: false }]
+      : []),
+  ];
+  const completed: Array<{ source: string; target: string }> = [];
+
+  try {
+    for (const move of moves) {
+      const moved = await moveStoredPath(move.source, move.target);
+      if (!moved && move.required) throw new Error("Nie znaleziono plików dokumentu w magazynie.");
+      if (moved) completed.push(move);
+    }
+    const updated = await rekeyDocumentRecord(id, nextId, new Date().toISOString());
+    if (!updated) throw new DocumentInputError("Nie znaleziono dokumentu.", 404);
+    return updated;
+  } catch (error) {
+    for (const move of completed.reverse()) {
+      try {
+        await moveStoredPath(move.target, move.source);
+      } catch (rollbackError) {
+        console.error("Nie udało się cofnąć zmiany ścieżki dokumentu.", rollbackError);
+      }
+    }
+    throw error;
+  }
 }
 
 export function publicDocument(record: DocumentRecord, request: Request) {

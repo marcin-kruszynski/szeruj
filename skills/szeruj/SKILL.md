@@ -1,6 +1,6 @@
 ---
 name: szeruj
-description: Twórz i publikuj gotowe do udostępnienia dokumenty Markdown, samodzielne strony HTML oraz paczki ZIP z HTML, CSS, JavaScriptem i zasobami w aplikacji Szeruj. Używaj zawsze, gdy użytkownik mówi „Hej, szeruj”, „szeruj”, „wrzuć do Szeruj”, „udostępnij przez Szeruj”, prosi o link do raportu lub chce opublikować wynik pracy agenta jako dokument.
+description: Twórz i publikuj gotowe do udostępnienia dokumenty Markdown, samodzielne strony HTML oraz paczki ZIP z HTML, CSS, JavaScriptem i zasobami w aplikacji Szeruj. Używaj zawsze, gdy użytkownik mówi „Szeruj”, „wrzuć do Szeruj”, „udostępnij przez Szeruj”, prosi o link do raportu lub chce opublikować wynik pracy agenta jako dokument.
 ---
 
 # Szeruj
@@ -10,20 +10,23 @@ Szeruj i oddaj użytkownikowi gotowy publiczny link.
 
 ## Zachowaj kontrakt odpowiedzi
 
-Po udanej publikacji zakończ odpowiedź dokładnie jedną krótką linią:
+Po udanej publikacji zakończ odpowiedź dokładnie jedną krótką linią wypisaną
+przez klienta. Klient losuje jeden z obsługiwanych komunikatów, na przykład:
 
-```text
-Hej, tutaj wrzuciłem <URL>
-```
+- `Wyszerowane: <URL>`
+- `Szernięte tu: <URL>`
+- `Poszło w szer: <URL>`
 
-Podstaw rzeczywisty adres zwrócony przez API. Nie dodawaj logów, instrukcji ani
-streszczenia, chyba że użytkownik wyraźnie o nie poprosi. Nigdy nie twierdź, że
-dokument został opublikowany, jeśli API nie zwróciło poprawnego adresu.
+Nie wymyślaj własnej wersji komunikatu i nie przepisuj go — zwróć dokładnie
+linię z rzeczywistym adresem wypisaną przez `share.py`. Nie dodawaj logów,
+instrukcji ani streszczenia, chyba że użytkownik wyraźnie o nie poprosi. Nigdy
+nie twierdź, że dokument został opublikowany, jeśli API nie zwróciło poprawnego
+adresu.
 
 ## Wykonaj przepływ publikacji
 
 1. Ustal treść z bieżącej rozmowy.
-   - Gdy „Hej, szeruj” następuje po wykonanej analizie lub pracy, opublikuj jej
+   - Gdy „Szeruj” następuje po wykonanej analizie lub pracy, opublikuj jej
      najbardziej użyteczny rezultat bez ponownego pytania o treść.
    - Gdy użytkownik wskazuje plik, opublikuj dokładnie ten plik.
    - Gdy naprawdę nie ma materiału ani celu dokumentu, zadaj jedno krótkie

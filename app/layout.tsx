@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { headers } from "next/headers";
 import { publicOriginFromHeaders } from "@/lib/public-url";
 import {
@@ -9,6 +9,7 @@ import {
   THEME_STORAGE_KEY,
 } from "@/lib/themes";
 import "./globals.css";
+import "./ui.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,6 +19,14 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const newsreader = Newsreader({
+  variable: "--font-editorial",
+  subsets: ["latin", "latin-ext"],
+  weight: "variable",
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
 const defaultTitle = "szeruj — dokumenty od agentów, gotowe do pokazania";
@@ -40,7 +49,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: "szeruj",
       locale: "pl_PL",
       type: "website",
-      images: [{ url: imageUrl, width: 1731, height: 909, alt: "szeruj — Wrzuć. Otwórz. Szeruj." }],
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: "szeruj — Wrzuć. Otwórz. Szeruj." }],
     },
     twitter: {
       card: "summary_large_image",
@@ -64,8 +73,9 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} antialiased`}
       >
+        <a className="skip-link" href="#main-content">Przejdź do treści</a>
         {children}
       </body>
     </html>
